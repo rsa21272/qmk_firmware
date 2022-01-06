@@ -55,58 +55,65 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 void send_eisu(void) {
-  tap_code16(KC_F17);
-  tap_code16(KC_LANG2);
+  tap_code16(C(S(KC_QUOT)));
 #ifdef NICOLA_ENABLE
   nicola_off();
 #endif
 }
 
 void send_shift_eisu(void) {
-  tap_code16(S(KC_F17));
-  tap_code16(S(KC_LANG2));
+  tap_code16(C(S(KC_L)));
 #ifdef NICOLA_ENABLE
   nicola_off();
 #endif
 }
 
 void send_kana(void) {
-  tap_code16(KC_F19);
-  tap_code16(KC_LANG1);
+  tap_code16(C(S(KC_J)));
 #ifdef NICOLA_ENABLE
   nicola_on();
 #endif
 }
 
 void send_shift_kana(void) {
-  tap_code16(S(KC_F19));
-  tap_code16(S(KC_LANG1));
+  tap_code16(C(S(KC_K)));
 #ifdef NICOLA_ENABLE
   nicola_on();
 #endif
-}
-
-void send_left_spacebar(void) {
-  tap_code16(KC_SPC);
 }
 
 void send_right_spacebar(void) {
   tap_code16(KC_SPC);
 }
 
+void send_left_spacebar(void) {
+  static uint16_t last_keycode = 0;
+  static uint16_t last_keytime = 0;
+  uint16_t now = timer_read();
+  if (now - last_keytime > 1000) {
+    last_keycode = C(KC_J);
+  }
+  last_keytime = now;
+  switch (last_keycode) {
+    case C(KC_J): last_keycode = C(KC_K); break;
+    case C(KC_K): last_keycode = C(KC_SCLN); break;
+    case C(KC_SCLN): last_keycode = C(KC_L); break;
+    case C(KC_L): last_keycode = C(KC_J); break;
+  }
+  tap_code16(last_keycode);
+}
+
 void send_zen_eisu(void) {
-  tap_code16(KC_F17);
-  tap_code16(KC_LANG2);
+  tap_code16(C(S(KC_L)));
 }
 
 void send_zen_kana(void) {
-  tap_code16(KC_F19);
-  tap_code16(KC_LANG1);
+  tap_code16(C(S(KC_J)));
 }
 
 void keyboard_post_init_user(void) {
 #ifdef JTU_ENABLE
-  is_jtu = true;
+  is_jtu = false;
 #endif
 #ifdef NICOLA_ENABLE
   is_nicola = false;
@@ -127,75 +134,75 @@ void matrix_scan_user(void) {
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  static uint16_t gui = KC_NO;
-  switch (gui) {
+  static bool rgui = false;
+  static bool lgui = false;
+  static bool rgui2 = false;
+  static bool lgui2 = false;
+  switch (keycode) {
     default:
-      if (keycode == NC_RGUI || keycode == NC_LGUI) {
-        if (record->event.pressed)
-          gui = keycode;
-        return false;
+      if ((!IS_MOD(keycode) && record->event.pressed)) {
+        if (rgui && !rgui2) {
+          register_code(KC_RGUI);
+          rgui2 = true;
+        }
+        if (lgui && !lgui2) {
+          register_code(KC_LGUI);
+          lgui2 = true;
+        }
+        if (!rgui && rgui2) {
+          unregister_code(KC_RGUI);
+          rgui2 = false;
+        }
+        if (!lgui && lgui2) {
+          unregister_code(KC_LGUI);
+          lgui2 = false;
+        }
       }
       break;
     case NC_RGUI:
-      switch (keycode) {
-        case NC_RGUI:
-          if (!record->event.pressed) {
-            send_kana();
-            gui = 0;
-          }
-          return false;
-        case NC_LGUI:
-          if (record->event.pressed) {
-            send_shift_eisu();
-            gui = 0;
-          }
-          return false;
-        default:
-          if (!IS_MOD(keycode) && record->event.pressed) {
-            register_code(KC_RGUI);
-            gui = KC_RGUI;
-          }
-      }
-      break;
-    case NC_LGUI:
-      switch (keycode) {
-        case NC_LGUI:
-          if (!record->event.pressed) {
-            send_eisu();
-            gui = 0;
-          }
-          return false;
-        case NC_RGUI:
-          if (record->event.pressed) {
-            send_shift_kana();
-            gui = 0;
-          }
-          return false;
-        default:
-          if (!IS_MOD(keycode) && record->event.pressed) {
-            register_code(KC_LGUI);
-            gui = KC_LGUI;
-          }
-      }
-      break;
-    case KC_RGUI:
-      if (keycode == NC_RGUI || keycode == NC_LGUI) {
-        if (keycode == NC_RGUI && !record->event.pressed) {
+      if (lgui) {
+        if (record->event.pressed) {
+          send_shift_kana();
+          rgui2 = lgui2 = true;
+        }
+      } else if (!record->event.pressed) {
+        if (rgui2) {
           unregister_code(KC_RGUI);
-          gui = 0;
+          rgui2 = false;
+        } else {
+          if (get_mods() & MOD_MASK_SHIFT) {
+            send_shift_kana();
+          } else {
+            send_kana();
+          }
         }
-        return false;
+        rgui = false;
+      } else {
+        rgui = true;
       }
-      break;
-    case KC_LGUI:
-      if (keycode == NC_RGUI || keycode == NC_LGUI) {
-        if (keycode == NC_LGUI && !record->event.pressed) {
+      return false;
+    case NC_LGUI:
+      if (rgui) {
+        if (record->event.pressed) {
+          send_shift_eisu();
+          rgui2 = lgui2 = true;
+        }
+      } else if (!record->event.pressed) {
+        if (lgui2) {
           unregister_code(KC_LGUI);
-          gui = 0;
+          lgui2 = false;
+        } else {
+          if (get_mods() & MOD_MASK_SHIFT) {
+            send_shift_eisu();
+          } else {
+            send_eisu();
+          }
         }
-        return false;
+        lgui = false;
+      } else {
+        lgui = true;
       }
-      break;
+      return false;
   }
 #ifdef JTU_ENABLE
   switch (keycode) {

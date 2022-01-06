@@ -98,7 +98,7 @@ void tap_jtu16(uint16_t keycode) {
     tap_code16(keycode);
     return;
   }
-  int i = find_jtu(keycode);
+  int i = find_jtu(keycode & 0xFF);
   if (i >= 0) {
     uint8_t mods = 0;
     if (keycode & QK_LCTL)
