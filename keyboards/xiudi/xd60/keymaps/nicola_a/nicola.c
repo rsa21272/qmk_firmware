@@ -240,14 +240,7 @@ static bool is_nicola_key(uint16_t keycode) {
 
 bool process_nicola(uint16_t keycode, keyrecord_t *record) {
   static bool previous_mode = false;
-  static uint8_t mods = 0;
-  if (IS_MOD(keycode)) {
-    if (record->event.pressed) {
-      mods |= MOD_BIT(keycode);
-    } else {
-      mods &= ~MOD_BIT(keycode);
-    }
-  }
+  uint8_t mods = get_mods();
   bool nicola_enabled = is_nicola && mods == 0 && is_nicola_key(keycode);
   if (previous_mode != nicola_enabled) {
     previous_mode = nicola_enabled;
